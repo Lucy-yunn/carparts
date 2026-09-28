@@ -141,6 +141,10 @@ Per `Parts` row:
    dimensions (`lengthCm` / `widthCm` / `heightCm` / `weightKg` / `packageSizeNotes`).
 3. **Photos** — upload from the seller's folder, **downscale on ingest** (~2000 px longest
    edge), order (first = primary), soft cap ~15. Only these enter Vercel Blob.
+   The browser shrinks each photo to 2000 px JPEG before sending; nothing over 4 MB is sent
+   (clear message instead), and `serverActions.bodySizeLimit` is `4.4mb`, under the 4.5 MB a
+   hosted function accepts. The server still downscales with `sharp` (issue #37,
+   `lib/photo-upload-limits.ts`).
 4. **Publish checklist** — `draft → published` requires: ≥1 photo · `condition` set ·
    `priceEur > 0` · `Part` linked with a leaf `Category` · `DonorVehicle` linked · ≥1
    `PartNumber` **or** "no visible number" ticked · **the seller is available** (has an active

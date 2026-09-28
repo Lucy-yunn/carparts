@@ -38,6 +38,7 @@ The repo is a **modified Next.js `16.3.4`** scaffold. `AGENTS.md` warns that API
 ### Photo storage
 - **Vercel Blob** behind a thin `lib/storage.ts` abstraction; the database stores **URL + metadata only**. Rendered via `next/image` with an `images.remotePatterns` allow-list.
 - Only the **curated** photo set enters Blob (staff select/downscale on ingest); raw seller dumps stay in a shared drive and are never migrated ([`docs/seller-intake.md`](../seller-intake.md) §4, [ADR-0007](./0007-staff-entry-no-submission-entity.md)). No listing photos in `public/` or the repo.
+- Upload goes through a Server Action, not direct browser-to-Blob, so `sharp` sees every photo. To fit the host's 4.5 MB request cap, the browser shrinks each photo first and the upload limit is 4 MB (issue #37).
 
 ### i18n
 - **next-intl** with the `app/[locale]` segment: server-side message catalogs, ICU messages, EUR/number/date formatting, a ready-made locale switcher. All UI copy authored as message keys from the first screen. EN is the only fully-translated locale in v1; `bg` (and later `nl`/`de`/`fr`/`ro`) are scaffolded — adding one later is one messages file + one locale-array entry. Non-English selection shows a "not translated yet" notice and reverts.

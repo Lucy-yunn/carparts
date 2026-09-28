@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useActionState } from "react";
 import { SubmitButton, FormMessage } from "../../_components/form";
+import { shrinkPhoto } from "../_lib/shrink-photo";
+import { shrinkThenUpload } from "../_lib/shrink-then-upload";
 import type { AuthFormState } from "../../register/actions";
 
 export interface PhotoRow {
@@ -34,7 +36,7 @@ export function PhotoManager({
   moveAction?: (formData: FormData) => void | Promise<void>;
 }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
-    uploadAction,
+    shrinkThenUpload(uploadAction, shrinkPhoto),
     undefined,
   );
 

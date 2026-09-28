@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { PHOTO_MAX_EDGE } from "./photo-upload-limits";
 
 /**
  * Node-safe. Downscale a staff-uploaded photo for the web on ingest
@@ -6,7 +7,7 @@ import sharp from "sharp";
  * EXIF orientation applied and metadata stripped. Only the result reaches
  * Vercel Blob — the raw upload is never stored.
  */
-export const MAX_EDGE = 2000;
+export const MAX_EDGE = PHOTO_MAX_EDGE;
 
 export interface ProcessedImage {
   data: Buffer;
