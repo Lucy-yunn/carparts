@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import { useActionState } from "react";
+import { checkPhotoFile } from "@/lib/photo-upload-limits";
 import { SubmitButton, FormMessage } from "../../_components/form";
+import { shrinkPhoto } from "../_lib/shrink-photo";
 import type { AuthFormState } from "../../register/actions";
 
 export interface PhotoRow {
@@ -33,8 +35,17 @@ export function PhotoManager({
   removeAction: (formData: FormData) => void | Promise<void>;
   moveAction?: (formData: FormData) => void | Promise<void>;
 }) {
+  // Shrink in the browser first, then check the size, so an oversized photo gets a clear message
+  // here instead of being cut off at the request-size limit (issue #37).
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
-    uploadAction,
+    async (prev, formData) => {
+      const chosen = formData.get("photo");
+      const photo = chosen instanceof File && chosen.size > 0 ? await shrinkPhoto(chosen) : null;
+      const error = checkPhotoFile(photo);
+      if (error) return { message: error };
+      formData.set("photo", photo as File);
+      return uploadAction(prev, formData);
+    },
     undefined,
   );
 
