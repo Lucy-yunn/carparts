@@ -12,6 +12,21 @@ import { UnsafeDatabaseError, EXPECTED_DATABASE } from "./local-db-guard";
 const LOCAL_HOSTS: readonly string[] = ["localhost", "127.0.0.1", "[::1]", "::1"];
 const LOCAL_DATABASES: readonly string[] = Object.values(EXPECTED_DATABASE);
 
+/**
+ * Query parameters that only tune the connection, including the ones Neon puts in its
+ * strings. Anything else (`host`, `hostaddr`, `dbname`, `port`, `service`, ...) could point
+ * the connection elsewhere, even at this machine through a Unix socket.
+ */
+const ALLOWED_PARAMS: ReadonlySet<string> = new Set([
+  "sslmode",
+  "channel_binding",
+  "connect_timeout",
+  "schema",
+  "pgbouncer",
+  "connection_limit",
+  "pool_timeout",
+]);
+
 export interface ProductionTarget {
   host: string;
   /**
@@ -53,6 +68,10 @@ function parse(name: string, value: string | undefined): { host: string; databas
 
   const host = url.hostname.toLowerCase();
   if (!host || LOCAL_HOSTS.includes(host)) return refuse("points at this machine, not the production database");
+
+  for (const key of url.searchParams.keys()) {
+    if (!ALLOWED_PARAMS.has(key.toLowerCase())) return refuse(`has the parameter "${key}", which is not allowed`);
+  }
 
   let database: string;
   try {
@@ -137,7 +156,8 @@ export async function runProductionMigrate(options: ProductionRunOptions, deps: 
     if (!row || row.database !== target.database) {
       return fail(`The connected database is not ${target.database}. Nothing was run.`);
     }
-    if (typeof row.addr === "string" && LOOPBACK_ADDRESSES.includes(row.addr)) {
+    // No address means a Unix-socket connection, which is always this machine: fail closed.
+    if (typeof row.addr !== "string" || LOOPBACK_ADDRESSES.includes(row.addr)) {
       return fail("The connected server is on this machine, not production. Nothing was run.");
     }
   } catch {

@@ -47,6 +47,22 @@ describe("assertProductionUrls: which production connection strings may be migra
     expect(() => assertProductionUrls({ PROD_DATABASE_URL: POOLED, PROD_DIRECT_URL: otherDb })).toThrow(/same database/);
   });
 
+  it("accepts the parameters Neon puts in its connection strings", () => {
+    const neon = (url: string) => `${url}&channel_binding=require&connect_timeout=15`;
+    expect(assertProductionUrls({ PROD_DATABASE_URL: neon(POOLED), PROD_DIRECT_URL: neon(DIRECT) }).database).toBe("neondb");
+  });
+
+  it("refuses a parameter that could send the connection somewhere else", () => {
+    for (const param of ["host=/var/run/postgresql", "hostaddr=127.0.0.1", "dbname=ivo_dev", "port=5432", "service=local"]) {
+      expect(() => assertProductionUrls({ PROD_DATABASE_URL: POOLED, PROD_DIRECT_URL: `${DIRECT}&${param}` })).toThrow(
+        /is not allowed/,
+      );
+      expect(() => assertProductionUrls({ PROD_DATABASE_URL: `${POOLED}&${param}`, PROD_DIRECT_URL: DIRECT })).toThrow(
+        /is not allowed/,
+      );
+    }
+  });
+
   it("refuses a value pasted twice, and never echoes it", () => {
     try {
       assertProductionUrls({ PROD_DATABASE_URL: POOLED + POOLED, PROD_DIRECT_URL: DIRECT });
@@ -134,6 +150,10 @@ describe("runProductionMigrate: migrations reach production only after every che
     for (const answer of [
       [{ database: "ivo_dev", addr: "127.0.0.1" }],
       [{ database: "neondb", addr: "127.0.0.1" }],
+      [{ database: "neondb", addr: "::1" }],
+      // No address means a Unix-socket connection, which is always this machine.
+      [{ database: "neondb", addr: null }],
+      [{ database: "neondb" }],
       [{ database: "other", addr: "3.64.10.20" }],
       [],
       new Error("timeout"),

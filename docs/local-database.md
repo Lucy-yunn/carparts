@@ -104,7 +104,8 @@ Checks, in order (`scripts/prod-db-guard.ts`); nothing runs unless every one pas
 
 - both values are set, each a single PostgreSQL connection string;
 - neither points at this machine (`localhost`, `127.0.0.1`, `::1`) or names `ivo_dev` / `ivo_test`;
+- no query parameter could redirect the connection: only connection-tuning ones such as `sslmode` and `channel_binding` are allowed, and `host`, `hostaddr`, `dbname`, `port` and `service` are refused;
 - the direct value is not a pooled address, and both point at the same Neon endpoint and database;
-- the live server confirms it is that database and is not on this machine.
+- the live server confirms it is that database and reports a network address that is not this machine (no address, as over a Unix socket, is refused).
 
 Messages show the host and database name, never the password. Run it after merging a PR that adds a migration, before or right after that code deploys.
