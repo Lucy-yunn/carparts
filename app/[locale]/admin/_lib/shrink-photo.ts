@@ -1,4 +1,4 @@
-import { fitWithin, PHOTO_MAX_EDGE } from "@/lib/photo-upload-limits";
+import { fitWithin, PHOTO_MAX_EDGE } from "../../../../lib/photo-upload-limits";
 
 /**
  * Browser only. Shrinks a chosen photo to PHOTO_MAX_EDGE and re-encodes it as JPEG before it is
@@ -23,7 +23,7 @@ export async function shrinkPhoto(file: File): Promise<File> {
     bitmap.close();
     return file;
   }
-  ctx.drawImage(bitmap, 0, 0, width, height);
+  drawForJpeg(ctx, bitmap, width, height);
   bitmap.close();
 
   const blob = await new Promise<Blob | null>((resolve) =>
@@ -32,4 +32,23 @@ export async function shrinkPhoto(file: File): Promise<File> {
   if (!blob || blob.size >= file.size) return file;
   const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
   return new File([blob], name, { type: "image/jpeg" });
+}
+
+/**
+ * JPEG has no transparency: transparent pixels would come out black. Paint white first, so
+ * a transparent PNG (a seller logo used as an avatar) keeps a white background.
+ */
+export function drawForJpeg(
+  ctx: {
+    fillStyle: CanvasRenderingContext2D["fillStyle"];
+    fillRect(x: number, y: number, w: number, h: number): void;
+    drawImage(image: CanvasImageSource, x: number, y: number, w: number, h: number): void;
+  },
+  image: CanvasImageSource,
+  width: number,
+  height: number,
+): void {
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(image, 0, 0, width, height);
 }
