@@ -7,7 +7,7 @@ Development and automated tests run against a **PostgreSQL 18 installed on this 
 | `ivo_dev` | `npm run dev`, `db:migrate`, `db:deploy`, `db:seed` | `.env.local` |
 | `ivo_test` | `npm run test:integration`, `db:migrate:test`, `db:seed:test` | `.env.test.local` |
 
-The Neon databases, including production, are **not part of this workflow** and are never touched by it. Production settings live only in Vercel.
+The Neon databases are **not part of this workflow** and are never touched by it. Production settings live in Vercel. The one exception is applying migrations to production, which has its own command and its own guard (see [Production migrations](#production-migrations)).
 
 ## Why local
 
@@ -83,4 +83,28 @@ The local databases hold only seed data, so nothing is lost by resetting.
 - The local databases start empty. The demo data is rebuilt by the seed, not copied from Neon.
 - The same password is used for both databases. It is only for this machine, so choose one you do not use anywhere else.
 - Tests create and delete their own tagged rows. `db:seed:test` wipes `ivo_test` completely, which is fine because it is throwaway.
-- Production migrations are not run from this machine. When production exists they should run as part of the Vercel deployment, under their own reviewed step.
+- Production migrations run from this machine only through `db:status:prod` / `db:deploy:prod`, never as part of the Vercel build (a Preview deploy must never change production).
+
+## Production migrations
+
+`scripts/with-prod-db.ts` is the only way this repo reaches the production database, and it can only run `prisma migrate status` and `prisma migrate deploy`. It cannot reset, seed or push.
+
+1. Create `.env.neon-prod.local` in the repo root yourself (git-ignored by `.env*`). Paste each value once:
+
+   ```
+   PROD_DATABASE_URL="<Neon production, pooled connection string>"
+   PROD_DIRECT_URL="<Neon production, direct connection string (host without -pooler)>"
+   ```
+
+   The names start with `PROD_` on purpose: Next.js, Prisma and the local guards never read them, so this file cannot redirect `npm run dev` or the tests.
+2. `npm run db:status:prod` shows the production host / database and which migrations are pending. It changes nothing.
+3. `npm run db:deploy:prod` does the same, then asks you to type the database name. Only an exact match applies the pending migrations. `npm run db:deploy:prod -- --confirm <name>` gives the name up front.
+
+Checks, in order (`scripts/prod-db-guard.ts`); nothing runs unless every one passes:
+
+- both values are set, each a single PostgreSQL connection string;
+- neither points at this machine (`localhost`, `127.0.0.1`, `::1`) or names `ivo_dev` / `ivo_test`;
+- the direct value is not a pooled address, and both name the same database;
+- the live server confirms it is that database and is not on this machine.
+
+Messages show the host and database name, never the password. Run it after merging a PR that adds a migration, before or right after that code deploys.

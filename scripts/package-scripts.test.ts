@@ -29,6 +29,13 @@ describe("package.json: destructive database scripts go through the local-only g
     expect(unguarded.map(([name]) => name)).toEqual([]);
   });
 
+  it("production is reached only through scripts/with-prod-db.ts, which picks the prisma command itself", () => {
+    expect(scripts["db:deploy:prod"]).toBe("tsx scripts/with-prod-db.ts deploy");
+    expect(scripts["db:status:prod"]).toBe("tsx scripts/with-prod-db.ts status");
+    const prodScripts = Object.entries(scripts).filter(([, cmd]) => cmd.includes("with-prod-db"));
+    expect(prodScripts.map(([name]) => name).sort()).toEqual(["db:deploy:prod", "db:status:prod"]);
+  });
+
   it("no script loads .env.local straight into a prisma command", () => {
     const bypass = Object.entries(scripts).filter(([, cmd]) => /dotenv\s+-e\s+\.env\.local\s+--\s+prisma\s+(migrate|db\s+seed|db\s+push)/.test(cmd));
     expect(bypass.map(([name]) => name)).toEqual([]);

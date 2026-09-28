@@ -14,6 +14,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "tsx scripts/with-dev-db.ts prisma migrate dev",
     "db:deploy": "tsx scripts/with-dev-db.ts prisma migrate deploy",
+    "db:status:prod": "tsx scripts/with-prod-db.ts status",
+    "db:deploy:prod": "tsx scripts/with-prod-db.ts deploy",
     "db:seed": "tsx scripts/with-dev-db.ts prisma db seed",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:migrate:test": "tsx scripts/with-test-db.ts prisma migrate deploy",
