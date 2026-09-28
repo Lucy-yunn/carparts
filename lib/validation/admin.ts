@@ -28,10 +28,18 @@ export const modelGroupSchema = z.object({
   name: z.string().trim().min(1, "Enter a name"),
 });
 
+// A blank year input means "unknown / still in production", never 0. Issue #38.
+const optYear = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v ? Number(v) : undefined))
+  .pipe(z.number().int().min(1950).max(2100).optional());
+
 export const generationSchema = z.object({
   modelGroupId: z.string().min(1),
   label: z.string().trim().min(1, "Enter a label"),
   chassisCodes: z.string().trim().optional(), // comma-separated in the form
-  productionStart: z.coerce.number().int().min(1950).max(2100).optional(),
-  productionEnd: z.coerce.number().int().min(1950).max(2100).optional(),
+  productionStart: optYear,
+  productionEnd: optYear,
 });

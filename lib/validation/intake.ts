@@ -2,12 +2,13 @@ import * as z from "zod";
 
 /** DonorVehicle + Listing intake form schemas (docs/spec/admin-tool.md §6). Node-safe. */
 
+// Absent → undefined ("leave as is"); submitted blank → null ("clear it"). Issue #38.
 const optNum = z
   .string()
   .trim()
   .optional()
-  .transform((v) => (v ? Number(v) : undefined))
-  .pipe(z.number().optional());
+  .transform((v) => (v === undefined ? undefined : v === "" ? null : Number(v)))
+  .pipe(z.number().nullable().optional());
 
 const opt = z.string().trim().optional();
 
