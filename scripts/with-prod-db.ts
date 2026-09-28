@@ -2,8 +2,8 @@
  * The ONLY way this repo reaches the production database, and only for migrations:
  *
  *   npm run db:status:prod                        which migrations are pending (read-only)
- *   npm run db:deploy:prod                        apply them, after typing the database name
- *   npm run db:deploy:prod -- --confirm <name>    the same, without the question
+ *   npm run db:deploy:prod                           apply them, after typing the endpoint name
+ *   npm run db:deploy:prod -- --confirm <endpoint>   the same, without the question
  *
  * The connection strings come from `.env.neon-prod.local` (git-ignored; you create it),
  * as PROD_DATABASE_URL (Neon pooled) and PROD_DIRECT_URL (Neon direct). They are read into
@@ -20,7 +20,7 @@ const PROD_ENV_FILE = ".env.neon-prod.local";
 
 const [mode, ...rest] = process.argv.slice(2);
 if (mode !== "status" && mode !== "deploy") {
-  console.error("usage: tsx scripts/with-prod-db.ts status | deploy [--confirm <database name>]");
+  console.error("usage: tsx scripts/with-prod-db.ts status | deploy [--confirm <endpoint, e.g. ep-cool-name-123>]");
   process.exit(2);
 }
 const confirmAt = rest.indexOf("--confirm");

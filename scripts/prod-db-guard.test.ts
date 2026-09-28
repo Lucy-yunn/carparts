@@ -7,7 +7,11 @@ const DIRECT = "postgresql://owner:s3cret@ep-cool-name-123.eu-central-1.aws.neon
 describe("assertProductionUrls: which production connection strings may be migrated", () => {
   it("accepts a remote database and returns host and name, never the password", () => {
     const target = assertProductionUrls({ PROD_DATABASE_URL: POOLED, PROD_DIRECT_URL: DIRECT });
-    expect(target).toEqual({ host: "ep-cool-name-123.eu-central-1.aws.neon.tech", database: "neondb" });
+    expect(target).toEqual({
+      host: "ep-cool-name-123.eu-central-1.aws.neon.tech",
+      endpoint: "ep-cool-name-123",
+      database: "neondb",
+    });
     expect(JSON.stringify(target)).not.toContain("s3cret");
   });
 
@@ -31,6 +35,11 @@ describe("assertProductionUrls: which production connection strings may be migra
     expect(() => assertProductionUrls({ PROD_DATABASE_URL: POOLED, PROD_DIRECT_URL: POOLED })).toThrow(
       /PROD_DIRECT_URL must be the direct .*not the pooled/,
     );
+  });
+
+  it("refuses when the two values point at different Neon endpoints (e.g. production and a dev branch)", () => {
+    const devBranch = DIRECT.replace("ep-cool-name-123", "ep-other-branch-456");
+    expect(() => assertProductionUrls({ PROD_DATABASE_URL: POOLED, PROD_DIRECT_URL: devBranch })).toThrow(/same Neon endpoint/);
   });
 
   it("refuses when the two values name different databases", () => {
@@ -90,8 +99,8 @@ describe("runProductionMigrate: migrations reach production only after every che
     expect(log).toEqual(["client:direct", "probe", "disconnect", "spawn:prisma migrate status (prod-urls)"]);
   });
 
-  it("deploy: shows status, asks for the database name, then applies migrations", async () => {
-    const { d, log, lines } = deps({ typed: " neondb " });
+  it("deploy: shows status, asks for the endpoint name, then applies migrations", async () => {
+    const { d, log, lines } = deps({ typed: " ep-cool-name-123 " });
     expect(await runProductionMigrate({ mode: "deploy", env }, d)).toBe(0);
     expect(log).toEqual([
       "client:direct",
@@ -106,16 +115,17 @@ describe("runProductionMigrate: migrations reach production only after every che
   });
 
   it("deploy: a wrong or empty confirmation applies nothing", async () => {
-    for (const typed of ["", "yes", "ivo_dev", "NEONDB"]) {
+    // "neondb" is every Neon database's default name, so it must not be enough to confirm.
+    for (const typed of ["", "yes", "ivo_dev", "neondb", "EP-COOL-NAME-123", "ep-cool-name-12"]) {
       const { d, log } = deps({ typed });
       expect(await runProductionMigrate({ mode: "deploy", env }, d)).toBe(1);
       expect(log.filter((l) => l.startsWith("spawn:prisma migrate deploy"))).toEqual([]);
     }
   });
 
-  it("deploy: --confirm with the right name skips the question", async () => {
+  it("deploy: --confirm with the right endpoint skips the question", async () => {
     const { d, log } = deps();
-    expect(await runProductionMigrate({ mode: "deploy", env, confirm: "neondb" }, d)).toBe(0);
+    expect(await runProductionMigrate({ mode: "deploy", env, confirm: "ep-cool-name-123" }, d)).toBe(0);
     expect(log).not.toContain("ask");
     expect(log.at(-1)).toBe("spawn:prisma migrate deploy (prod-urls)");
   });
@@ -128,14 +138,14 @@ describe("runProductionMigrate: migrations reach production only after every che
       [],
       new Error("timeout"),
     ]) {
-      const { d, log } = deps({ answer, typed: "neondb" });
+      const { d, log } = deps({ answer, typed: "ep-cool-name-123" });
       expect(await runProductionMigrate({ mode: "deploy", env }, d)).toBe(1);
       expect(log.filter((l) => l.startsWith("spawn"))).toEqual([]);
     }
   });
 
   it("runs nothing, not even a connection, when a URL is refused", async () => {
-    const { d, log } = deps({ typed: "neondb" });
+    const { d, log } = deps({ typed: "ep-cool-name-123" });
     expect(await runProductionMigrate({ mode: "deploy", env: { PROD_DATABASE_URL: POOLED } }, d)).toBe(1);
     expect(log).toEqual([]);
   });

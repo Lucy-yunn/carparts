@@ -14,7 +14,18 @@ const LOCAL_DATABASES: readonly string[] = Object.values(EXPECTED_DATABASE);
 
 export interface ProductionTarget {
   host: string;
+  /**
+   * The first part of the host, e.g. `ep-cool-name-123` on Neon. Unique per database endpoint,
+   * unlike the database name (every Neon database defaults to `neondb`), so it is what the
+   * person types to confirm a deploy.
+   */
+  endpoint: string;
   database: string;
+}
+
+/** `ep-x-123-pooler.eu-central-1.aws.neon.tech` → `ep-x-123`. */
+function endpointOf(host: string): string {
+  return host.split(".")[0].replace(/-pooler$/, "");
 }
 
 export interface ProductionEnv {
@@ -65,12 +76,17 @@ export function assertProductionUrls(env: ProductionEnv): ProductionTarget {
       "PROD_DIRECT_URL must be the direct connection (Neon: without -pooler), not the pooled one. Nothing was run.",
     );
   }
+  if (endpointOf(pooled.host) !== endpointOf(direct.host)) {
+    throw new UnsafeDatabaseError(
+      "PROD_DATABASE_URL and PROD_DIRECT_URL must point at the same Neon endpoint. Nothing was run.",
+    );
+  }
   if (pooled.database !== direct.database) {
     throw new UnsafeDatabaseError(
       "PROD_DATABASE_URL and PROD_DIRECT_URL must name the same database. Nothing was run.",
     );
   }
-  return { host: direct.host, database: direct.database };
+  return { host: direct.host, endpoint: endpointOf(direct.host), database: direct.database };
 }
 
 export interface ProductionClient {
@@ -89,7 +105,7 @@ export interface ProductionRunDeps {
 export interface ProductionRunOptions {
   mode: "status" | "deploy";
   env: ProductionEnv;
-  /** The database name given up front (`--confirm <name>`), instead of asking. */
+  /** The endpoint name given up front (`--confirm <endpoint>`), instead of asking. */
   confirm?: string;
 }
 
@@ -97,7 +113,7 @@ const LOOPBACK_ADDRESSES: readonly string[] = ["127.0.0.1", "::1"];
 
 /**
  * status: check the target, then `prisma migrate status` (read-only).
- * deploy: the same, then the person types the database name, then `prisma migrate deploy`.
+ * deploy: the same, then the person types the endpoint name, then `prisma migrate deploy`.
  * Nothing else can run: no reset, no seed, no push.
  */
 export async function runProductionMigrate(options: ProductionRunOptions, deps: ProductionRunDeps): Promise<number> {
@@ -142,8 +158,9 @@ export async function runProductionMigrate(options: ProductionRunOptions, deps: 
   if (options.mode === "status") return statusCode;
 
   const typed =
-    options.confirm ?? (await deps.ask(`\nType the database name (${target.database}) to apply the pending migrations to PRODUCTION: `));
-  if (typed.trim() !== target.database) {
+    options.confirm ??
+    (await deps.ask(`\nType the endpoint name (${target.endpoint}) to apply the pending migrations to PRODUCTION: `));
+  if (typed.trim() !== target.endpoint) {
     return fail("The name did not match. No migration was applied.");
   }
 

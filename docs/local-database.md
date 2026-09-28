@@ -98,13 +98,13 @@ The local databases hold only seed data, so nothing is lost by resetting.
 
    The names start with `PROD_` on purpose: Next.js, Prisma and the local guards never read them, so this file cannot redirect `npm run dev` or the tests.
 2. `npm run db:status:prod` shows the production host / database and which migrations are pending. It changes nothing.
-3. `npm run db:deploy:prod` does the same, then asks you to type the database name. Only an exact match applies the pending migrations. `npm run db:deploy:prod -- --confirm <name>` gives the name up front.
+3. `npm run db:deploy:prod` does the same, then asks you to type the **endpoint name**: the first part of the host, such as `ep-cool-name-123`. Only an exact match applies the pending migrations. `npm run db:deploy:prod -- --confirm <endpoint>` gives it up front. The endpoint is used rather than the database name because every Neon database is called `neondb` by default, so the name alone cannot tell production from a dev branch.
 
 Checks, in order (`scripts/prod-db-guard.ts`); nothing runs unless every one passes:
 
 - both values are set, each a single PostgreSQL connection string;
 - neither points at this machine (`localhost`, `127.0.0.1`, `::1`) or names `ivo_dev` / `ivo_test`;
-- the direct value is not a pooled address, and both name the same database;
+- the direct value is not a pooled address, and both point at the same Neon endpoint and database;
 - the live server confirms it is that database and is not on this machine.
 
 Messages show the host and database name, never the password. Run it after merging a PR that adds a migration, before or right after that code deploys.
