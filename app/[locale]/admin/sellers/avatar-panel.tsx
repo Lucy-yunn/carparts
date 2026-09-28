@@ -5,6 +5,8 @@ import { useActionState } from "react";
 import { SubmitButton, FormMessage } from "../../_components/form";
 import type { AuthFormState } from "../../register/actions";
 import { uploadSellerAvatarAction, removeSellerAvatarAction } from "./avatar-actions";
+import { shrinkPhoto } from "../_lib/shrink-photo";
+import { shrinkThenUpload } from "../_lib/shrink-then-upload";
 
 /**
  * The seller's public avatar (docs/seller-profile.md §2). Optional: with none, the
@@ -20,7 +22,7 @@ export function AvatarPanel({
   avatarUrl: string | null;
 }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
-    uploadSellerAvatarAction,
+    shrinkThenUpload(uploadSellerAvatarAction, shrinkPhoto),
     undefined,
   );
 
