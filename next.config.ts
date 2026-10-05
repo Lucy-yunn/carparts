@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
   // Turbopack's root inference.
   turbopack: { root: path.resolve() },
   // Portable by construction (ADR-0001): standard Node output, no Vercel-only APIs.
-  output: "standalone",
+  // Not on Vercel: Next 16.3 + standalone fails Vercel's onBuildComplete with
+  // ENOENT .next/next-server.js.nft.json (vercel/next.js#96646). Vercel sets VERCEL=1
+  // at build time and does not use the standalone folder anyway.
+  output: process.env.VERCEL ? undefined : "standalone",
   // `sharp` (photo downscale on ingest) is a native module — keep it external.
   serverExternalPackages: ["sharp"],
   // Lets the role guards answer a wrong-role request with a real 403 page (forbidden()), as
