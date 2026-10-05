@@ -83,4 +83,4 @@ The local databases hold only seed data, so nothing is lost by resetting.
 - The local databases start empty. The demo data is rebuilt by the seed, not copied from Neon.
 - The same password is used for both databases. It is only for this machine, so choose one you do not use anywhere else.
 - Tests create and delete their own tagged rows. `db:seed:test` wipes `ivo_test` completely, which is fine because it is throwaway.
-- Production migrations are not run from this machine. When production exists they should run as part of the Vercel deployment, under their own reviewed step.
+- Production migrations are not run from this machine. They run during the Vercel Production deployment: `vercel.json` builds with `npm run vercel-build` (`scripts/vercel-build.ts`), which runs `prisma migrate deploy` and then `next build` on Production only. Preview deployments only build and never migrate. A failed migration stops the build.
